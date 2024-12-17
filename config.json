@@ -1,0 +1,12 @@
+{
+    "model_count": 1,
+    "load_path": "prompts/mytest", 
+    "save_path": "lll",
+    "models": [
+      {
+        "name": "/mnt/afs/share/llama-3.2-1B-instruct",
+        "url": "http://14.103.16.79:15555"
+      }
+    ]
+}
+  
