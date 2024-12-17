@@ -1,7 +1,7 @@
 {
     "model_count": 1,
     "load_path": "prompts/mytest", 
-    "save_path": "lll",
+    "save_path": "res/",
     "models": [
       {
         "name": "/mnt/afs/share/llama-3.2-1B-instruct",

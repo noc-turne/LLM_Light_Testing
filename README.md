@@ -21,7 +21,7 @@
 
 **prompt格式**
 
-一个list，每个元素师一个字典，包含role和content，如下示例
+一个list，每个元素是一个字典，包含role和content，如下示例
 
             [
                 {"role": "user", "content": "If I say HHH, you answer KKK back to me!"},
@@ -39,7 +39,6 @@
 
 3. python start_testing.py
 
-p.s 当前有一个baseline model是deepseek-chat
 
 
 
