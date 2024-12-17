@@ -1,5 +1,7 @@
 **config文件**
 
+**model_count**： 需要测试的模型个数，与下文的models列表长度需保持一致
+
 **load_path**是多个prompt所在的文件夹名称
 
 **save_path**是prompt经过输出后的文件夹路径, 最终输出格式如下
@@ -11,11 +13,15 @@
     - res of model1
     - res of model2
 
-**models.name** 必须填写完整的vllm serve时的模型路径（因为vllm会把模型路径设定为网络请求路径），"/"也需要保持一致，假设vllm serve时的路径为/mnt/afs/share/llama-3.2-1B/, models.name也需要是/mnt/afs/share/llama-3.2-1B/（不能省最后的"/")
+models是一个列表，其中可包含多个model
 
-**models.url** 填写ip地址加端口号,前面加上http://, 如 "http://14.103.16.79:15555"
+**model.name** 必须填写完整的vllm serve时的模型路径（因为vllm会把模型路径设定为网络请求路径），"/"也需要保持一致，假设vllm serve时的路径为/mnt/afs/share/llama-3.2-1B/, models.name也需要是/mnt/afs/share/llama-3.2-1B/（不能省最后的"/")
 
-**models.api_key** 可选项，如果访问的是远端官网api，则输入对应的api_key
+**model.url** 填写ip地址加端口号,前面加上http://, 如 "http://14.103.16.79:15555"
+
+**model.api_key** 可选项，如果访问的是远端官网api，则输入对应的api_key
+
+
 
 <br>
 
