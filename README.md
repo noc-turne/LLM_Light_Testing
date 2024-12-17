@@ -13,14 +13,13 @@
     - res of model1
     - res of model2
 
-models是一个列表，其中可包含多个model
+**models**是一个列表，其中可包含多个model
 
 **model.name** 必须填写完整的vllm serve时的模型路径（因为vllm会把模型路径设定为网络请求路径），"/"也需要保持一致，假设vllm serve时的路径为/mnt/afs/share/llama-3.2-1B/, models.name也需要是/mnt/afs/share/llama-3.2-1B/（不能省最后的"/")
 
 **model.url** 填写ip地址加端口号,前面加上http://, 如 "http://14.103.16.79:15555"
 
 **model.api_key** 可选项，如果访问的是远端官网api，则输入对应的api_key
-
 
 
 <br>
@@ -34,6 +33,39 @@ models是一个列表，其中可包含多个model
                 {"role": "assistant", "content": "understood"},
                 {"role": "user", "content": "HHH"}
             ]
+
+<br>
+
+**输出格式**
+```
+{
+    "file": "prompt1.txt",
+    "model": "deepseek-chat",
+    "model_url": "https://api.deepseek.com",
+    "start_time": "2024-12-17T17:31:38.282322",
+    "prompt": [
+        {
+            "role": "user",
+            "content": "If I say HHH, you answer KKK back to me!"
+        },
+        {
+            "role": "assistant",
+            "content": "understood"
+        },
+        {
+            "role": "user",
+            "content": "HHH"
+        }
+    ],
+    "elapsed_time": 0.6917836666107178,
+    "prompt_token_len": 23,
+    "decode_token_len": 2,
+    "response": {
+        "role": "assistant",
+        "content": "KKK"
+    }
+}
+```
 
 <br>
 

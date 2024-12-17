@@ -1,11 +1,16 @@
 {
-    "model_count": 1,
+    "model_count": 2,
     "load_path": "prompts/mytest", 
     "save_path": "res/",
     "models": [
       {
         "name": "/mnt/afs/share/llama-3.2-1B-instruct",
         "url": "http://14.103.16.79:15555"
+      },
+      {
+        "name": "deepseek-chat", 
+        "url": "https://api.deepseek.com", 
+        "api_key": "sk-c4a8fe52693a4aaab64e648c42f40be6"
       }
     ]
 }
