@@ -126,4 +126,4 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
 
 ---
 
-如果有更多问题，请提交到[Issues](https://github.com/your-repository-url/issues)页面。
+如果有更多问题，请提交到[Issues](https://github.com/noc-turne/testing_pipeline/issues)页面。
