@@ -5,6 +5,7 @@ import asyncio
 import httpx
 import time
 from datetime import datetime
+import pandas as pd
 
 logging.basicConfig(
     level=logging.INFO,  
@@ -50,7 +51,7 @@ async def process_model(client, model, prompt, file_name, save_folder,):
         record["elapsed_time"] = time.time() - start_time
         record["error"] = str(e)
         logger.error(f"Error processing model {model['name']} for file {file_name}: {e}")
-        return e
+        return e, -1, -1, -1
     
     # save res to file
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -59,7 +60,7 @@ async def process_model(client, model, prompt, file_name, save_folder,):
     with open(model_file_path, 'w', encoding='utf-8') as f:
         json.dump(record, f, indent=4, ensure_ascii=False)
     # logger.info(f"Prompt {file_name} for model {model['name']} successfully processed")
-    return result['choices'][0]['message']['content']
+    return record['response'], record['prompt_token_len'], record['decode_token_len'], record['elapsed_time']
 
 async def process_file(load_path, file_name, models, save_path, eval_dict):
     file_path = os.path.join(load_path, file_name)
@@ -81,8 +82,9 @@ async def process_file(load_path, file_name, models, save_path, eval_dict):
     eval = []  
     for idx, result in enumerate(results):
         if result:
+            response, prompt_token_len, decode_token_len, elapsed_time = result
             # print(f"Model: {models[idx]['name']}, Model_URL: {models[idx]['url']} Response: {result}")
-            eval.append({'model': models[idx]['name'], 'model_url': models[idx]['url'], 'response': result})
+            eval.append({'model': models[idx]['name'], 'response': response, 'prompt_token_len': prompt_token_len, 'decode_token_len': decode_token_len, 'elapsed_time': elapsed_time})
         else:
             print(f"Model: {models[idx]['name']}, Model_URL: {models[idx]['url']} Response: Error occurred")
     eval_dict[file_name] = eval
@@ -93,6 +95,35 @@ async def main(load_path, file_list, models, save_path, eval_dict):
 
 def evaluate(eval_dict):
     return NotImplementedError
+
+def summary_table(eval_dict, save_path):
+    data = []
+    for prompt, entries in eval_dict.items():
+        for entry in entries:
+            data.append({
+                'Prompt': prompt,
+                'Model': entry['model'],
+                'Prompt Token Length': entry['prompt_token_len'],
+                'Decode Token Length': entry['decode_token_len'],
+                'Elapsed Time(s)': entry['elapsed_time']
+            })
+
+    df = pd.DataFrame(data)
+
+    df['Decode Speed(Token / s)'] = df.apply(lambda row: round(row['Decode Token Length'] / row['Elapsed Time(s)'], 2) 
+                                if row['Decode Token Length'] != -1 and row['Elapsed Time(s)'] > 0 else -1, axis=1)
+
+    df['Elapsed Time(s)'] = df['Elapsed Time(s)'].apply(lambda x: round(x, 3) if x >= 0 else x)
+
+    df_display = df.copy()
+    df_display.loc[df_display.duplicated(subset=['Prompt']), 'Prompt'] = ''
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_name = f"summary_table_{timestamp}.xlsx"
+
+    output_file_path = os.path.join(save_path, file_name)
+    df_display.to_excel(output_file_path, index=False)
+
 
 if __name__ == "__main__":
     config_file = "config.json"
@@ -119,4 +150,5 @@ if __name__ == "__main__":
     eval_dict = {}
     asyncio.run(main(load_path, file_list, models, save_path, eval_dict))
     print("Eval_dict:", eval_dict)
+    summary_table(eval_dict, save_path)
 
