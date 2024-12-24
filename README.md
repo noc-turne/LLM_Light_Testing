@@ -20,6 +20,7 @@
 3. **统一输出格式**：测试结果按模型和输入分类存储，支持后续自动化分析。
 4. **多轮对话支持**：支持复杂的多轮对话输入，便于验证模型交互能力。
 5. **表格总结功能**：自动生成表格汇总测试结果，便于性能对比和分析。
+6. **GPU监控支持**：提供对模型运行时GPU使用情况的监控和记录。
 
 ---
 
@@ -36,24 +37,28 @@
   - **`name`**: 模型路径，与`vLLM`服务路径一致。
   - **`url`**: 模型的IP地址与端口，并在开头加上"http://"。
   - **`api_key`**: （可选）远端API的密钥。
+  - **`gpu_url`**: （可选）GPU监控的API地址，用于获取GPU使用信息。
+  - **`interval`**: （可选）GPU信息采样间隔时间，单位为秒。
 
 示例：
 
 ```json
 {
     "model_count": 2,
-    "load_path": "./prompts",
-    "save_path": "./results",
+    "load_path": "prompts/mytest", 
+    "save_path": "res/",
     "models": [
-        {
-            "name": "/mnt/afs/share/llama-3.2-1B/",
-            "url": "http://127.0.0.1:8000",
-        },
-        {
-            "name": "deepseek-chat", 
-            "url": "https://api.deepseek.com", 
-            "api_key": "sk-123456"
-        }
+      {
+        "name": "llama-3.3-70B-instruct",
+        "url": "http://14.103.16.79:11000",
+        "gpu_url": "http://14.103.16.79:11002",
+        "gpu_interval": 3
+      },
+      {
+        "name": "deepseek-chat", 
+        "url": "https://api.deepseek.com", 
+        "api_key": "sk-123456"
+      }
     ]
 }
 ```
@@ -72,7 +77,7 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
 ]
 ```
 
-### 运行测试
+### 运行测试流程
 
 1. 配置`config.json`文件。
 2. 运行测试脚本。
@@ -103,6 +108,50 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
 
 总结表格存储在`save_path`目录下，文件格式为`.xlsx`，方便使用Excel或其他工具查看。
 
+### GPU监控支持
+
+本工具支持在测试过程中对模型运行的GPU使用情况进行实时监控，记录每个模型的GPU负载和显存使用情况，方便用户分析模型性能表现。
+
+#### 流程
+1. 在服务端运行gpu_monitor.py, 开放网络接口，使得当前测试端可以获取到服务端的gpu信息
+```bash
+python gpu_monitor.py
+```
+2. 在`config.json`文件中配置每个模型的`gpu_url`和`interval`。
+   - `gpu_url`：获取GPU使用信息的API地址。
+   - `interval`：采样间隔时间（秒）。
+3. 测试脚本启动后，工具会根据配置定期从`gpu_url`拉取GPU使用信息。
+4. GPU信息按模型存储在`save_path/gpu_info`目录下，文件名为`<模型名称>_<时间戳>.txt`。
+
+#### 输出示例
+以下是GPU监控记录的输出示例：
+
+```
+Current Time: 20241224_120000
+GPU 0 (NVIDIA A100):
+  GPU Utilization: 75%
+  Memory Utilization: 60%
+  Memory: 24300 MiB / 40000 MiB
+
+GPU 1 (NVIDIA A100):
+  GPU Utilization: 65%
+  Memory Utilization: 55%
+  Memory: 22000 MiB / 40000 MiB
+
+Current Time: 20241224_121000
+GPU 0 (NVIDIA A100):
+  GPU Utilization: 80%
+  Memory Utilization: 60%
+  Memory: 24300 MiB / 40000 MiB
+
+GPU 1 (NVIDIA A100):
+  GPU Utilization: 75%
+  Memory Utilization: 55%
+  Memory: 22000 MiB / 40000 MiB
+```
+
+每次采样的时间戳和每张GPU的利用率、显存利用率、以及显存使用情况均会记录，便于后续分析。
+
 ---
 
 ## 常见问题
@@ -127,3 +176,4 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
 ---
 
 如果有更多问题，请提交到[Issues](https://github.com/noc-turne/testing_pipeline/issues)页面。
+

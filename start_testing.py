@@ -6,6 +6,7 @@ import httpx
 import time
 from datetime import datetime
 import pandas as pd
+import aiohttp
 
 logging.basicConfig(
     level=logging.INFO,  
@@ -15,6 +16,40 @@ logging.basicConfig(
 current_file = os.path.splitext(os.path.basename(__file__))[0]
 logger = logging.getLogger(current_file)
 
+
+def gpu_info2txt(file_name, response):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # data = response.json()
+    with open(file_name, "a") as file:
+        file.write(f"Current Time: {timestamp}\n")
+        for gpu in response:
+            file.write(f"GPU {gpu['gpu_id']} ({gpu['name']}):\n")
+            file.write(f"  GPU Utilization: {gpu['gpu_utilization']}%\n")
+            file.write(f"  Memory Utilization: {gpu['memory_utilization']}%\n")
+            file.write(f"  Memory: {gpu['memory_used']} MiB / {gpu['memory_total']} MiB\n")
+            file.write("\n")  
+        file.write("\n")
+
+async def fetch_gpu_info(api_url):
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(api_url) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    logger.error(f"Received status code {response.status} for URL {api_url}")
+                    return None
+        except Exception as e:
+            logger.error(f"Failed to fetch GPU info from {api_url}. Exception: {e}")
+            return None
+
+
+async def monitor_gpu(api_url, interval, file_name, stop_event):
+    while not stop_event.is_set():
+        response = await fetch_gpu_info(api_url)
+        if response:  # Ensure the response is valid
+            gpu_info2txt(file_name, response)
+        await asyncio.sleep(interval)
 
 
 def load_config(file_path):
@@ -93,6 +128,27 @@ async def main(load_path, file_list, models, save_path, eval_dict):
     tasks = [process_file(load_path, file_name, models, save_path, eval_dict) for file_name in file_list]
     await asyncio.gather(*tasks)
 
+async def gpu_main(models, save_path, stop_event):
+    tasks = []
+
+    gpu_info_path = os.path.join(save_path, "gpu_info")
+    os.makedirs(gpu_info_path, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    for model in models:
+        if "gpu_url" not in model.keys():
+            continue
+        file_name = os.path.join(gpu_info_path, os.path.basename(model['name']) + f"_{timestamp}.txt")
+        tasks.append(monitor_gpu(model['gpu_url'] + "/gpu_info", interval=model['gpu_interval'], file_name=file_name, stop_event=stop_event))
+        
+    await asyncio.gather(*tasks)
+
+async def combined_run(load_path, file_list, models, save_path, eval_dict):
+    stop_event = asyncio.Event()
+    gpu_task = asyncio.create_task(gpu_main(models, save_path, stop_event))
+    await main(load_path, file_list, models, save_path, eval_dict)
+    stop_event.set()
+    await gpu_task
+
 def evaluate(eval_dict):
     return NotImplementedError
 
@@ -143,12 +199,18 @@ if __name__ == "__main__":
     logger.info(f"load_path: {load_path}")
     logger.info(f"save_path: {save_path}")
     for model in models:
-        logger.info(f"model_name: {model['name']}, model_url: {model['url']}")
+        if 'gpu_url' in model.keys():
+            logger.info(f"model_name: {model['name']}, model_url: {model['url']}, gpu_url: {model['gpu_url']}, gpu_interval: {model['gpu_interval']}")
+        else:
+            logger.info(f"model_name: {model['name']}, model_url: {model['url']}")
+
     logger.info(f"-------------------config information end--------------------------")
     file_list = [f for f in os.listdir(load_path) if os.path.isfile(os.path.join(load_path, f))]
 
     eval_dict = {}
-    asyncio.run(main(load_path, file_list, models, save_path, eval_dict))
+    asyncio.run(combined_run(load_path, file_list, models, save_path, eval_dict))
+
+    # asyncio.run(gpu_main(models, save_path))
     print("Eval_dict:", eval_dict)
     summary_table(eval_dict, save_path)
 
