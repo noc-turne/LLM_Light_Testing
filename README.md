@@ -40,7 +40,7 @@
 - **`save_path`**: 测试结果的输出路径。
 - **`save_response`**: bool值，是否需要输出每个prompt的模型运行结果的json文件
 - **`models`**: 模型列表，每个模型包含：
-  - **`name`**: 模型路径，与`vLLM`服务路径一致。
+  - **`name`**: 模型路径，与`vLLM`服务路径一致, 不可以重名。
   - **`url`**: 模型的IP地址与端口，并在开头加上"http://"。
   - **`api_key`**: （可选）远端API的密钥。
   - **`gpu_url`**: （可选）GPU监控的API地址，用于获取GPU使用信息。
@@ -103,19 +103,27 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
    ├── gpu_info/
    │   ├── res_of_model1.txt
    │   └── res_of_model2.txt
-   ├── summary_table.xlsx
+   ├── file_summary_table.xlsx
+   ├── model_summary_table.xlsx
    ```
 
 ### 表格总结功能
 
-程序会生成一个总结表格，用于对测试结果进行汇总分析。表格结构示例如下：
+程序会生成一个文件总结表格和模型总结表格，用于对测试结果进行汇总分析。文件总结表格结构示例如下：
 
 | Prompt        | Model                                    | Prompt Token Length | Decode Token Length | Elapsed Time(s) | Decode Speed(Token/s) |
 |---------------|------------------------------------------|---------------------|----------------------|-----------------|------------------------|
-| prompt1.txt   | /mnt/afs/share/llama-3.2-1B-instruct     | -1                  | -1                   | -1              | -1                     |
+| prompt1.txt   | llama-3.3-70B-instruct                   | -1                  | -1                   | -1              | -1                     |
 |               | deepseek-chat                            | 23                  | 2                    | 0.85            | 2.35                   |
-| prompt2.txt   | /mnt/afs/share/llama-3.2-1B-instruct     | -1                  | -1                   | -1              | -1                     |
+| prompt2.txt   | llama-3.3-70B-instruct                   | -1                  | -1                   | -1              | -1                     |
 |               | deepseek-chat                            | 23                  | 2                    | 0.94            | 2.13                   |
+
+模型总结表格结构示例如下：
+| Model                                    | Total Prompt Tokens | Total Decode Tokens  | Total Runtime(s) | Decode Speed(Token/s) |
+|------------------------------------------|---------------------|----------------------|-----------------|------------------------|
+| llama-3.3-70B-instruct                   | -1                  | -1                   | -1              | -1                     |
+| deepseek-chat                            | 115255              | 18673                | 29.38           | 635.56                 |
+
 
 总结表格存储在`save_path`目录下，文件格式为`.xlsx`，方便使用Excel或其他工具查看。
 
