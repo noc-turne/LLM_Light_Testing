@@ -38,6 +38,7 @@
 - **`model_count`**: 需要测试的模型数量，必须与`models`列表长度一致。
 - **`load_path`**: Prompt文件的输入路径。
 - **`save_path`**: 测试结果的输出路径。
+- **`save_response`**: bool值，是否需要输出每个prompt的模型运行结果的json文件
 - **`models`**: 模型列表，每个模型包含：
   - **`name`**: 模型路径，与`vLLM`服务路径一致。
   - **`url`**: 模型的IP地址与端口，并在开头加上"http://"。
@@ -52,6 +53,7 @@
     "model_count": 2,
     "load_path": "prompts/mytest", 
     "save_path": "res/",
+    "save_response": false,
     "models": [
       {
         "name": "llama-3.3-70B-instruct",
@@ -98,6 +100,10 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
    ├── prompt2/
    │   ├── res_of_model1.json
    │   └── res_of_model2.json
+   ├── gpu_info/
+   │   ├── res_of_model1.txt
+   │   └── res_of_model2.txt
+   ├── summary_table.xlsx
    ```
 
 ### 表格总结功能

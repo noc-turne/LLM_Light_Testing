@@ -7,6 +7,7 @@ import time
 from datetime import datetime
 import pandas as pd
 import aiohttp
+import random
 
 logging.basicConfig(
     level=logging.INFO,  
@@ -57,7 +58,7 @@ def load_config(file_path):
         config = json.load(file)
     return config
 
-async def process_model(client, model, prompt, file_name, save_folder,):
+async def process_model(client, model, prompt, file_name, save_folder, save_response):
     start_time = time.time()  
     record = {
         "file": file_name,
@@ -78,7 +79,10 @@ async def process_model(client, model, prompt, file_name, save_folder,):
         )
         response.raise_for_status()
         result = response.json()
-        record["elapsed_time"] = time.time() - start_time  
+        record['end_time'] = datetime.now().isoformat()
+        start_time_datetime = datetime.fromisoformat(record['start_time'])
+        end_time_datetime = datetime.fromisoformat(record['end_time'])
+        record["elapsed_time"] = (end_time_datetime - start_time_datetime).total_seconds()
         record['prompt_token_len'] = result['usage']['prompt_tokens']
         record['decode_token_len'] = result['usage']['completion_tokens']
         record["response"] = result['choices'][0]['message']
@@ -89,29 +93,39 @@ async def process_model(client, model, prompt, file_name, save_folder,):
         return e, -1, -1, -1
     
     # save res to file
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    model_file_name = f"{os.path.basename(model['name'])}_{timestamp}.json"
-    model_file_path = os.path.join(save_folder, model_file_name)
-    with open(model_file_path, 'w', encoding='utf-8') as f:
-        json.dump(record, f, indent=4, ensure_ascii=False)
+    if save_response is True:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") + f"_{datetime.now().microsecond // 1000:03d}"
+        normalized_path = model['name'].rstrip("/")
+        model_file_name = f"{os.path.basename(normalized_path)}_{timestamp}.json"
+        model_file_path = os.path.join(save_folder, model_file_name)
+        with open(model_file_path, 'w', encoding='utf-8') as f:
+            json.dump(record, f, indent=4, ensure_ascii=False)
     # logger.info(f"Prompt {file_name} for model {model['name']} successfully processed")
     return record['response'], record['prompt_token_len'], record['decode_token_len'], record['elapsed_time']
 
-async def process_file(load_path, file_name, models, save_path, eval_dict):
+async def process_file(load_path, file_name, models, save_path, save_response, eval_dict):
     file_path = os.path.join(load_path, file_name)
 
     with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
-    prompt = json.loads(content)
-    assert isinstance(prompt, list), "Error: 'prompt' must be a list."
+    
+    try:
+        prompt = json.loads(content)
+        assert isinstance(prompt, list), "Error: 'prompt' must be a list."
+    except json.JSONDecodeError as e:
+        print(f"Failed to parse JSON in file: {file_name}")
+        print(f"Error: {e}")
+        return
 
+    save_folder = ""
     # save path
-    prompt_name = os.path.splitext(file_name)[0]  
-    save_folder = os.path.join(save_path, prompt_name)
-    os.makedirs(save_folder, exist_ok=True)
+    if save_response is True:
+        prompt_name = os.path.splitext(file_name)[0]  
+        save_folder = os.path.join(save_path, prompt_name)
+        os.makedirs(save_folder, exist_ok=True)
 
     async with httpx.AsyncClient(timeout=30) as client:
-        tasks = [process_model(client, model, prompt, file_name, save_folder) for model in models]
+        tasks = [process_model(client, model, prompt, file_name, save_folder, save_response) for model in models]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
     eval = []  
@@ -124,8 +138,8 @@ async def process_file(load_path, file_name, models, save_path, eval_dict):
             print(f"Model: {models[idx]['name']}, Model_URL: {models[idx]['url']} Response: Error occurred")
     eval_dict[file_name] = eval
 
-async def main(load_path, file_list, models, save_path, eval_dict):
-    tasks = [process_file(load_path, file_name, models, save_path, eval_dict) for file_name in file_list]
+async def main(load_path, file_list, models, save_path, save_response, eval_dict):
+    tasks = [process_file(load_path, file_name, models, save_path, save_response, eval_dict) for file_name in file_list]
     await asyncio.gather(*tasks)
 
 async def gpu_main(models, save_path, stop_event):
@@ -133,19 +147,20 @@ async def gpu_main(models, save_path, stop_event):
 
     gpu_info_path = os.path.join(save_path, "gpu_info")
     os.makedirs(gpu_info_path, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     for model in models:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") + f"_{random.randint(1000, 9999)}"
         if "gpu_url" not in model.keys():
             continue
-        file_name = os.path.join(gpu_info_path, os.path.basename(model['name']) + f"_{timestamp}.txt")
+        normalized_path = model['name'].rstrip("/")
+        file_name = os.path.join(gpu_info_path, os.path.basename(normalized_path) + f"_{timestamp}.txt")
         tasks.append(monitor_gpu(model['gpu_url'] + "/gpu_info", interval=model['gpu_interval'], file_name=file_name, stop_event=stop_event))
         
     await asyncio.gather(*tasks)
 
-async def combined_run(load_path, file_list, models, save_path, eval_dict):
+async def combined_run(load_path, file_list, models, save_path, eval_dict, save_response):
     stop_event = asyncio.Event()
     gpu_task = asyncio.create_task(gpu_main(models, save_path, stop_event))
-    await main(load_path, file_list, models, save_path, eval_dict)
+    await main(load_path, file_list, models, save_path, save_response, eval_dict)
     stop_event.set()
     await gpu_task
 
@@ -188,16 +203,15 @@ if __name__ == "__main__":
     model_count = config.get("model_count", 0)
     load_path = config.get("load_path", "")
     save_path = config.get("save_path", "")
+    save_response = config.get("save_response", True)
     models = config.get("models", [])
-
-    # baseline_model = {"name": "deepseek-chat", "url": "https://api.deepseek.com", "api_key": "sk-c4a8fe52693a4aaab64e648c42f40be6"}
-    # models.append(baseline_model)
 
     logger.info(f"-------------------config information--------------------------")
     
     logger.info(f"model_count: {model_count}")
     logger.info(f"load_path: {load_path}")
     logger.info(f"save_path: {save_path}")
+    logger.info(f"save_response: {save_response}")
     for model in models:
         if 'gpu_url' in model.keys():
             logger.info(f"model_name: {model['name']}, model_url: {model['url']}, gpu_url: {model['gpu_url']}, gpu_interval: {model['gpu_interval']}")
@@ -208,7 +222,7 @@ if __name__ == "__main__":
     file_list = [f for f in os.listdir(load_path) if os.path.isfile(os.path.join(load_path, f))]
 
     eval_dict = {}
-    asyncio.run(combined_run(load_path, file_list, models, save_path, eval_dict))
+    asyncio.run(combined_run(load_path, file_list, models, save_path, eval_dict, save_response))
 
     # asyncio.run(gpu_main(models, save_path))
     print("Eval_dict:", eval_dict)
