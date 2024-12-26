@@ -232,7 +232,7 @@ def file_summary_table(eval_dict, save_path):
     df_display.loc[df_display.duplicated(subset=['Prompt']), 'Prompt'] = ''
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    file_name = f"summary_table_{timestamp}.xlsx"
+    file_name = f"file_summary_table_{timestamp}.xlsx"
 
     output_file_path = os.path.join(save_path, file_name)
     df_display.to_excel(output_file_path, index=False)
