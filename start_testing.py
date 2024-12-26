@@ -94,6 +94,10 @@ async def process_model(client, model_idx, model, prompt, file_name, save_folder
         record['prompt_token_len'] = result['usage']['prompt_tokens']
         record['decode_token_len'] = result['usage']['completion_tokens']
         record["response"] = result['choices'][0]['message']
+    except httpx.HTTPError as http_error:
+        # record["error"] = f"HTTPError: {http_error}, response content: {http_error.response.content if http_error.response else 'No Response'}"
+        logger.error(f"HTTPError processing model {model['name']} for file {file_name}: {http_error}")
+        return e, -1, -1, -1, -1, -1
     except Exception as e:
         record["elapsed_time"] = time.time() - start_time
         record["error"] = str(e)
@@ -132,7 +136,7 @@ async def process_file(load_path, file_name, models, save_path, save_response, e
         save_folder = os.path.join(save_path, prompt_name)
         os.makedirs(save_folder, exist_ok=True)
 
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=3000) as client:
         tasks = [process_model(client, model_idx, model, prompt, file_name, save_folder, save_response) for model_idx, model in enumerate(models)]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
