@@ -34,7 +34,6 @@
 
 `config.json`配置文件包含以下主要字段：
 
-- **`model_count`**: 需要测试的模型数量，必须与`models`列表长度一致。
 - **`load_path`**: Prompt文件的输入路径。
 - **`save_path`**: 测试结果的输出路径。
 - **`save_response`**: bool值，是否需要输出每个prompt的模型运行结果的json文件
@@ -49,21 +48,20 @@
 
 ```json
 {
-    "model_count": 2,
-    "load_path": "prompts/mytest", 
-    "save_path": "res/",
-    "save_response": false,
+    "load_path": "examples/prompts", 
+    "save_path": "examples/res",
+    "save_response": true,
     "models": [
       {
         "name": "llama-3.3-70B-instruct",
-        "url": "http://14.103.16.79:11000",
-        "gpu_url": "http://14.103.16.79:11002",
+        "url": "http://xxx.xxx.xxx.xxx:xxxx",
+        "gpu_url": "http://xxx.xxx.xxx.xxx:xxxx",
         "gpu_interval": 3
       },
       {
-        "name": "deepseek-chat", 
-        "url": "https://api.deepseek.com", 
-        "api_key": "sk-123456"
+        "name": "deepseek-chat",
+        "url": "https://api.deepseek.com",
+        "api_key": "sk-token123"
       }
     ]
 }
