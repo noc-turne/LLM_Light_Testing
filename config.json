@@ -1,20 +1,18 @@
 {
-    "model_count": 2,
-    "load_path": "prompts/interaction2", 
-    "save_path": "res/interaction3",
-    "save_response": false,
+    "load_path": "examples/prompts", 
+    "save_path": "examples/res",
+    "save_response": true,
     "models": [
       {
-        "name": "/mnt/afs/share/llama-3.1-8B-instruct",
-        "url": "http://14.103.16.79:11004",
-        "gpu_url": "http://14.103.16.79:11005",
+        "name": "llama-3.3-70B-instruct",
+        "url": "http://xxx.xxx.xxx.xxx:xxxx",
+        "gpu_url": "http://xxx.xxx.xxx.xxx:xxxx",
         "gpu_interval": 3
       },
       {
-        "name": "/mnt/afs/share/llama-3.1-8B-instruct/",
-        "url": "http://14.103.16.79:11006",
-        "gpu_url": "http://14.103.16.79:11007",
-        "gpu_interval": 3
+        "name": "deepseek-chat",
+        "url": "https://api.deepseek.com",
+        "api_key": "sk-token123"
       }
     ]
 }

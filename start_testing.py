@@ -143,7 +143,6 @@ async def process_file(load_path, file_name, models, save_path, save_response, e
     eval = []  
     for idx, result in enumerate(results):
         if result:
-            print(result)
             response, prompt_token_len, decode_token_len, elapsed_time, start_time, end_time = result
             eval.append({'model': models[idx]['name'], 'response': response, 'prompt_token_len': prompt_token_len, 'decode_token_len': decode_token_len, 'elapsed_time': elapsed_time, "start_time": start_time, "end_time": end_time})
         else:

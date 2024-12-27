@@ -1,0 +1,5 @@
+[
+    {"role": "user", "content": "If I say HHH, you answer KKK back to me!"},
+    {"role": "assistant", "content": "understood"},
+    {"role": "user", "content": "HHH"}
+]
