@@ -3,6 +3,7 @@
 ## 目录
 - [目的](#%E7%9B%AE%E7%9A%84)
 - [功能](#%E5%8A%9F%E8%83%BD)
+- [安装](#%E5%AE%89%E8%A3%85)
 - [使用指南](#%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97)
   - [配置文件结构](#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84)
   - [Prompt文件格式](#prompt%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F)
@@ -27,6 +28,37 @@
 6. **GPU监控支持**：提供对模型运行时GPU使用情况的监控和记录。
 
 ---
+
+## 安装
+
+### 服务器端安装
+1. 克隆项目到本地服务器：
+   ```bash
+   git clone https://github.com/noc-turne/testing_pipeline.git
+   cd testing_pipeline
+   ```
+
+2. 安装所需依赖
+   ```bash
+   pip install -r requirements-server.txt
+   ```
+
+3. 验证是否安装成功
+   ```bash
+   vllm serve 本地模型路径
+   ```
+
+### 客户端安装
+1. 克隆项目到本地服务器：
+   ```bash
+   git clone https://github.com/noc-turne/testing_pipeline.git
+   cd testing_pipeline
+   ```
+
+2. 安装所需依赖
+   ```bash
+   pip install -r requirements-client.txt
+   ```
 
 ## 使用指南
 
@@ -83,12 +115,23 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
 
 ### 运行测试流程
 
-1. 配置`config.json`文件。
-2. 运行测试脚本。
+1. 服务端通过vllm部署模型网络接口，具体部署参数可详见(https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html)。
+   ```bash
+   vllm serve 本地模型路径
+   ```
+
+2. 启动GPU监控脚本（如果需要），具体可见[GPU监控支持](#gpu%E7%9B%91%E6%8E%A7%E6%94%AF%E6%8C%81)：
+   ```bash
+   python gpu_monitor.py
+   ```
+
+3. 将需要测试的prompts整理成一个文件夹。
+4. 配置`config.json`文件。
+5. 运行测试脚本。
    ```bash
    python start_testing.py
    ```
-3. 测试结果按以下结构存储：
+6. 测试结果按以下结构存储：
    ```
    save_path/
    ├── prompt1/
@@ -106,7 +149,7 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
 
 ### 表格总结功能
 
-程序会生成一个文件总结表格和模型总结表格，用于对测试结果进行汇总分析。文件总结表格结构示例如下：
+程序会生成一个文件总结表格和模型总结表格，用于对测试结果进行汇总分析。文件总结表格（file_summary_table.xlsx）结构示例如下：
 
 | Prompt        | Model                                    | Prompt Token Length | Decode Token Length | Elapsed Time(s) | Decode Speed(Token/s) |
 |---------------|------------------------------------------|---------------------|----------------------|-----------------|------------------------|
@@ -115,7 +158,7 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
 | prompt2.txt   | llama-3.3-70B-instruct                   | -1                  | -1                   | -1              | -1                     |
 |               | deepseek-chat                            | 23                  | 2                    | 0.94            | 2.13                   |
 
-模型总结表格结构示例如下：
+模型总结表格（model_summary_table.xlsx）结构示例如下：
 | Model                                    | Total Prompt Tokens | Total Decode Tokens  | Total Runtime(s) | Decode Speed(Token/s) |
 |------------------------------------------|---------------------|----------------------|-----------------|------------------------|
 | llama-3.3-70B-instruct                   | -1                  | -1                   | -1              | -1                     |
@@ -179,6 +222,7 @@ GPU 1 (NVIDIA A100):
 ### 2. 为什么测试脚本运行报错？
 - 检查`config.json`文件是否正确配置。
 - 确认Prompt文件格式是否符合要求。
+- 根据报错信息检查服务器模型端口是否可以被访问
 
 ### 3. 如何增加更多模型？
 - 在`config.json`中增加新的模型配置，并确保其`name`和`url`与实际部署一致。
