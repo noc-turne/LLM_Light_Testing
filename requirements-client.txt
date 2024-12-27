@@ -1,3 +1,4 @@
 httpx
 pandas
 aiohttp
+openpyxl
