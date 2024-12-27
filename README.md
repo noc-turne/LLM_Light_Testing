@@ -125,7 +125,7 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
    python gpu_monitor.py
    ```
 
-3. 将需要测试的prompts整理成一个文件夹。
+3. 将需要测试的prompts整理成一个文件夹如`examples/prompts`。
 4. 配置`config.json`文件。
 5. 运行测试脚本。
    ```bash
@@ -146,6 +146,39 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
    ├── file_summary_table.xlsx
    ├── model_summary_table.xlsx
    ```
+
+    每个prompt的具体输出如下所示, 可通过配置文件中的save_response选择是否输出：
+    ```json
+    {
+        "file": "prompt1.txt",
+        "model": "llama-3.3-70B-instruct",
+        "model_url": "http://14.103.16.79:11000",
+        "start_time": "2024-12-27T16:09:53.610822",
+        "prompt": [
+            {
+                "role": "user",
+                "content": "If I say HHH, you answer KKK back to me!"
+            },
+            {
+                "role": "assistant",
+                "content": "understood"
+            },
+            {
+                "role": "user",
+                "content": "HHH"
+            }
+        ],
+        "end_time": "2024-12-27T16:09:54.072932",
+        "elapsed_time": 0.46211,
+        "prompt_token_len": 63,
+        "decode_token_len": 3,
+        "response": {
+            "role": "assistant",
+            "content": "KKK",
+            "tool_calls": []
+        }
+    }
+    ```
 
 ### 表格总结功能
 
