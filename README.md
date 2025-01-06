@@ -211,9 +211,9 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
 ```bash
 python gpu_monitor.py
 ```
-2. 在`config.json`文件中配置每个模型的`gpu_url`和`interval`。
+2. 在`config.json`文件中配置每个模型的`gpu_url`和`gpu_interval`。
    - `gpu_url`：获取GPU使用信息的API地址。
-   - `interval`：采样间隔时间（秒）。
+   - `gpu_interval`：采样间隔时间（秒）。
 3. 测试脚本启动后，工具会根据配置定期从`gpu_url`拉取GPU使用信息。
 4. GPU信息按模型存储在`save_path/gpu_info`目录下，文件名为`<模型名称>_<时间戳>.txt`。
 
