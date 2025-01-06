@@ -1,0 +1,3 @@
+[
+    {"role": "user", "content": [{"type": "text", "text": "What's in the image?"}]}
+]

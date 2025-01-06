@@ -10,6 +10,7 @@
   - [运行测试流程](#%E8%BF%90%E8%A1%8C%E6%B5%8B%E8%AF%95%E6%B5%81%E7%A8%8B)
   - [表格总结功能](#%E8%A1%A8%E6%A0%BC%E6%80%BB%E7%BB%93%E5%8A%9F%E8%83%BD)
   - [GPU监控支持](#gpu%E7%9B%91%E6%8E%A7%E6%94%AF%E6%8C%81)
+  - [视觉大语言模型测试（BETA版）](#%E8%A7%86%E8%A7%89%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E6%B5%8B%E8%AF%95beta%E7%89%88)
 - [常见问题](#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98)
 
 ---
@@ -26,6 +27,7 @@
 4. **多轮对话支持**：支持复杂的多轮对话输入，便于验证模型交互能力。
 5. **表格总结功能**：自动生成表格汇总测试结果，便于性能对比和分析。
 6. **GPU监控支持**：提供对模型运行时GPU使用情况的监控和记录。
+7. **视觉大语言模型支持（BETA）**： 提供本地部署视觉大语言模型的自动化测试
 
 ---
 
@@ -74,7 +76,7 @@
   - **`url`**: 模型的IP地址与端口，并在开头加上"http://"。
   - **`api_key`**: （可选）远端API的密钥。
   - **`gpu_url`**: （可选）GPU监控的API地址，用于获取GPU使用信息。
-  - **`interval`**: （可选）GPU信息采样间隔时间，单位为秒。
+  - **`gpu_interval`**: （可选）GPU信息采样间隔时间，单位为秒, 默认为3。
 
 示例：
 
@@ -245,6 +247,49 @@ GPU 1 (NVIDIA A100):
 每次采样的时间戳和每张GPU的利用率、显存利用率、以及显存使用情况均会记录，便于后续分析。
 
 ---
+
+### 视觉大语言模型测试（BETA版）
+
+本功能用于对视觉大语言模型（如Qwen2-VL-7B）进行测试，当前为测试版本，支持基于`vLLM`框架的本地部署。
+
+#### 测试流程
+
+1. **模型部署**  
+   确保模型已部署在本地，通过`vLLM`进行部署。以下是示例命令：
+   ```bash
+   vllm serve Qwen2-VL-7B --task generate --max-model-len 4096 --allowed-local-media-path path-to-testing_pipeline --limit-mm-per-prompt image=k
+   ```
+
+2. **配置`config_vlm.json`**  
+   创建并配置`config_vlm.json`文件，其内容暂时与`config.json`一致。
+
+3. **准备测试文件**  
+   测试文件结构示例：
+   ```
+   load_path/
+   ├── test1/
+   │   ├── prompt1.txt
+   │   ├── images/
+   │   │   ├── a.jpg
+   │   │   └── b.jpg
+   ├── test2/
+   │   ├── prompt2.txt
+   │   ├── images/
+   │   │   ├── c.jpg
+   │   │   └── d.jpg
+   ```
+
+4. **运行测试脚本**  
+   运行以下命令启动测试：
+   ```bash
+   python start_testing_vlm.py
+   ```
+
+#### 注意事项
+- 测试文件目录中，`prompt1.txt`存储测试的文本提示，`images`目录下存储相关联的图像文件。
+- 确保`allowed-local-media-path`指向testing_pipeline的本机目录。
+- 当前仅支持单机本地部署测试。
+
 
 ## 常见问题
 

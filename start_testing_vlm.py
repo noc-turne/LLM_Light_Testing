@@ -78,15 +78,17 @@ async def gpu_main(models, save_path, stop_event):
 
 
 # RUNNING RELATED
-async def process_model(client, model_idx, model, prompt, file_name, save_folder, save_response):
+async def process_model(client, model_idx, model, prompt, test_name, image_path_list, save_folder, save_response):
     start_time = time.time()
     record = {
-        "file": file_name,
+        "test": test_name,
         "model": model['name'],
         'model_url': model['url'],
         "start_time": datetime.now().isoformat(),
         "prompt": prompt
     }
+    for image_path in image_path_list:
+        prompt[0]['content'].append({"type": "image_url", "image_url": {"url": "file://" + image_path}})
     api_key = model['api_key'] if 'api_key' in model else 'token-123'
     try:
         response = await client.post(
@@ -108,12 +110,12 @@ async def process_model(client, model_idx, model, prompt, file_name, save_folder
         record["response"] = result['choices'][0]['message']
     except httpx.HTTPError as http_error:
         # record["error"] = f"HTTPError: {http_error}, response content: {http_error.response.content if http_error.response else 'No Response'}"
-        logger.error(f"HTTPError processing model {model['name']} for file {file_name}: {http_error}")
+        logger.error(f"HTTPError processing model {model['name']} for file {test_name}: {http_error}")
         return http_error, -1, -1, -1, -1, -1
     except Exception as e:
         record["elapsed_time"] = time.time() - start_time
         record["error"] = str(e)
-        logger.error(f"Error processing model {model['name']} for file {file_name}: {e}")
+        logger.error(f"Error processing model {model['name']} for file {test_name}: {e}")
         return e, -1, -1, -1, -1, -1
 
     # save res to file
@@ -129,30 +131,42 @@ async def process_model(client, model_idx, model, prompt, file_name, save_folder
         'start_time'], record['end_time']
 
 
-async def process_file(load_path, file_name, models, save_path, save_response, eval_dict):
-    file_path = os.path.join(load_path, file_name)
+async def process_file(load_path, test_name, models, save_path, save_response, eval_dict):
+    image_path_list = []
+    test_path = os.path.join(load_path, test_name)
+    prompt = ''
 
-    with open(file_path, 'r', encoding='utf-8') as file:
-        content = file.read()
+    for item in os.listdir(test_path):
+        item_path = os.path.join(test_path, item)
 
-    try:
-        prompt = json.loads(content)
-        assert isinstance(prompt, list), "Error: 'prompt' must be a list."
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON in file: {file_name}")
-        logger.error(f"Error: {e}")
-        return
+        if os.path.isfile(item_path) and item.endswith('.txt'):
+            with open(item_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+            try:
+                prompt = json.loads(content)
+                assert isinstance(prompt, list), "Error: 'prompt' must be a list."
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse JSON in file: {item_path}")
+                logger.error(f"Error: {e}")
+                return
+
+        elif os.path.isdir(item_path):
+            for image in os.listdir(item_path):
+                image_path = os.path.join(item_path, image)
+                if os.path.isfile(image_path):
+                    image_path_list.append(os.path.abspath(image_path))
+
 
     save_folder = ""
     # save path
     if save_response is True:
-        prompt_name = os.path.splitext(file_name)[0]
-        save_folder = os.path.join(save_path, prompt_name)
+        test_name = os.path.splitext(test_name)[0]
+        save_folder = os.path.join(save_path, test_name)
         os.makedirs(save_folder, exist_ok=True)
 
     async with httpx.AsyncClient(timeout=3000) as client:
         tasks = [
-            process_model(client, model_idx, model, prompt, file_name, save_folder, save_response)
+            process_model(client, model_idx, model, prompt, test_name, image_path_list, save_folder, save_response)
             for model_idx, model in enumerate(models)
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -166,6 +180,7 @@ async def process_file(load_path, file_name, models, save_path, save_response, e
                 logger.error("Failed to unpack result:")
                 logger.error(f"Result: {result}")
                 logger.error(f"Error: {e}")
+            
             eval.append(
                 {
                     'model': models[idx]['name'],
@@ -179,18 +194,18 @@ async def process_file(load_path, file_name, models, save_path, save_response, e
             )
         else:
             logger.warning(f"Model: {models[idx]['name']}, Model_URL: {models[idx]['url']} Response: Error occurred")
-    eval_dict[file_name] = eval
+    eval_dict[test_name] = eval
 
 
-async def main(load_path, file_list, models, save_path, save_response, eval_dict):
-    tasks = [process_file(load_path, file_name, models, save_path, save_response, eval_dict) for file_name in file_list]
+async def main(load_path, test_list, models, save_path, save_response, eval_dict):
+    tasks = [process_file(load_path, test_name, models, save_path, save_response, eval_dict) for test_name in test_list]
     await asyncio.gather(*tasks)
 
 
-async def combined_run(load_path, file_list, models, save_path, eval_dict, save_response):
+async def combined_run(load_path, test_list, models, save_path, eval_dict, save_response):
     stop_event = asyncio.Event()
     gpu_task = asyncio.create_task(gpu_main(models, save_path, stop_event))
-    await main(load_path, file_list, models, save_path, save_response, eval_dict)
+    await main(load_path, test_list, models, save_path, save_response, eval_dict)
     stop_event.set()
     await gpu_task
 
@@ -295,7 +310,7 @@ def evaluate(eval_dict):
 
 
 if __name__ == "__main__":
-    config_file = "config.json"
+    config_file = "config_vlm.json"
     with open(config_file, 'r', encoding='utf-8') as file:
         config = json.load(file)
 
@@ -321,10 +336,10 @@ if __name__ == "__main__":
             logger.info(f"model_name: {model['name']}, model_url: {model['url']}")
 
     logger.info(f"-------------------config information end--------------------------")
-    file_list = [f for f in os.listdir(load_path) if os.path.isfile(os.path.join(load_path, f))]
+    test_list = [f for f in os.listdir(load_path) if os.path.isdir(os.path.join(load_path, f))]
 
     eval_dict = {}
-    asyncio.run(combined_run(load_path, file_list, models, save_path, eval_dict, save_response))
+    asyncio.run(combined_run(load_path, test_list, models, save_path, eval_dict, save_response))
 
     # print("Eval_dict:", eval_dict)
     file_summary_table(eval_dict, save_path)
