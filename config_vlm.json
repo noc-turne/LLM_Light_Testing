@@ -1,12 +1,12 @@
 {
-    "load_path": "vlm_examples", 
+    "load_path": "/mnt/afs/share/vlm_examples", 
     "save_path": "vlm_res",
     "save_response": true,
     "models": [
       {
-        "name": "/mnt/afs/share/Qwen2-VL-7B",
-        "url": "http://0.0.0.0:8000",
-        "gpu_url": "http://0.0.0.0:5000",
+        "name": "Qwen2-VL-7B",
+        "url": "http://14.103.16.79:11004",
+        "gpu_url": "http://14.103.16.79:11005",
         "gpu_interval": 3
       }
     ]
