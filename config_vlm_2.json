@@ -1,0 +1,16 @@
+{
+    "load_images_path": "/mnt/afs/marunmin/image_white", 
+    "load_prompt_path": "/mnt/afs/marunmin/white_block_predict.txt",
+    "save_path": "vlm_res_2",
+    "save_response": false,
+    "model_config": {"max_tokens": 70},
+    "models": [
+      {
+        "name": "Qwen2-VL-7B",
+        "url": "http://14.103.16.79:11004",
+        "gpu_url": "http://14.103.16.79:11005",
+        "gpu_interval": 3
+      }
+    ]
+  }
+    
