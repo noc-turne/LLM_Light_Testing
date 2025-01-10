@@ -1,5 +1,8 @@
 {
-    "load_path": "/mnt/afs/share/vlm_examples", 
+    "load_config": {
+      "mode": 0,
+      "load_path": "/mnt/afs/marunmin/testing_pipeline/vlm/vlm_examples"
+    },
     "save_path": "vlm_res",
     "save_response": true,
     "models": [

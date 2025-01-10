@@ -6,7 +6,6 @@ import httpx
 import time
 from datetime import datetime
 import pandas as pd
-import aiohttp
 import sys
 import copy
 
@@ -26,7 +25,7 @@ logger = logging.getLogger(current_file)
 
 # RUNNING RELATED
 async def process_model(client, model_idx, model, prompt, test_name, image_path_list, save_folder, save_response, model_config):
-
+    # print("idx", model_idx, "model", model, "prompt", prompt, "test_name", test_name, "path_list", image_path_list, "save_folder", save_folder, "response", save_response, "config", model_config)
     start_time = time.time()
     current_prompt = copy.deepcopy(prompt)
     for image_path in image_path_list:
@@ -40,7 +39,9 @@ async def process_model(client, model_idx, model, prompt, test_name, image_path_
     }
 
     config = {"model": model['name'], "messages": current_prompt}
-    config.update(model_config)
+    if model_config is not None:
+        # TODO model_config的验证
+        config.update(model_config)
     api_key = model['api_key'] if 'api_key' in model else 'token-123'
     try:
         response = await client.post(
@@ -80,15 +81,30 @@ async def process_model(client, model_idx, model, prompt, test_name, image_path_
         'start_time'], record['end_time']
 
 
-async def process_file(load_path, image_name, models, prompt, save_path, save_response, eval_dict, model_config):
+async def process_file(mode, load_path, test_name, models, save_path, save_response, eval_dict, model_config=None, prompt=None):
     save_folder = ""
-    image_path_list = [os.path.join(load_path, image_name),]
-    test_name = image_name
+    if mode == 1:
+        image_path_list = [os.path.join(load_path, test_name),]
+        assert prompt != None, "In mode == 1, prompt path must be provided by the user"
+
+    elif mode == 0:
+        image_path_list = []
+        test_path = os.path.join(load_path, test_name)
+        for item in os.listdir(test_path):
+            item_path = os.path.join(test_path, item)
+
+            if os.path.isfile(item_path) and item.endswith('.txt'): # prompt
+                prompt = load_json_vlm_prompt(item_path)
+
+            elif os.path.isdir(item_path): # images
+                for image in os.listdir(item_path):
+                    image_path = os.path.join(item_path, image)
+                    if os.path.isfile(image_path):
+                        image_path_list.append(os.path.abspath(image_path))
 
     # save path
     if save_response is True:
-        # test_name = os.path.splitext(test_name)[0]
-        # test_name = image_name
+        test_name = os.path.splitext(test_name)[0]
         save_folder = os.path.join(save_path, test_name)
         os.makedirs(save_folder, exist_ok=True)
 
@@ -125,15 +141,15 @@ async def process_file(load_path, image_name, models, prompt, save_path, save_re
     eval_dict[test_name] = eval
 
 
-async def main(load_path, image_list, models, prompt, save_path, save_response, eval_dict, model_config):
-    tasks = [process_file(load_path, image_name, models, prompt, save_path, save_response, eval_dict, model_config) for image_name in image_list]
+async def main(mode, load_path, test_list, models, save_path, save_response, eval_dict, model_config=None, prompt=None):
+    tasks = [process_file(mode, load_path, test_name, models, save_path, save_response, eval_dict, model_config, prompt) for test_name in test_list]
     await asyncio.gather(*tasks)
 
 
-async def combined_run(load_path, image_list, models, prompt, save_path, save_response, eval_dict, model_config):
+async def combined_run(mode, load_path, test_list, models, save_path, save_response, eval_dict, model_config=None, prompt=None):
     stop_event = asyncio.Event()
     gpu_task = asyncio.create_task(gpu_main(models, save_path, stop_event))
-    await main(load_path, image_list, models, prompt, save_path, save_response, eval_dict, model_config)
+    await main(mode, load_path, test_list, models, save_path, save_response, eval_dict, model_config, prompt)
     stop_event.set()
     await gpu_task
 
@@ -174,12 +190,23 @@ def evaluate(eval_dict):
 
 
 if __name__ == "__main__":
-    config_file = "config_vlm_2.json"
-    with open(config_file, 'r', encoding='utf-8') as file:
-        config = json.load(file)
+    config_file = "config_vlm.json"
+    config = load_json_file(config_file)
 
-    load_path = config.get("load_images_path", "")
-    load_prompt_path = config.get("load_prompt_path", "")
+    prompt = None
+
+    load_config = config.get("load_config", [])
+
+    mode = load_config.get("mode", -1)
+    if mode == 0: # load底下只有一个路径，既存在prompt也存在image
+        load_path = load_config.get("load_path", "")
+    elif mode == 1: # load底下存在一个image文件夹和一个prompt文件，每个prompt和image文件夹中的一个文件构成输入
+        load_path = load_config.get("load_images_path", "")
+        load_prompt_path = load_config.get("load_prompt_path", "")
+        prompt = load_json_vlm_prompt(load_prompt_path)
+    else:
+        assert mode >= 0, "mode must be assigned"
+        
     save_path = config.get("save_path", "")
     save_response = config.get("save_response", True)
     model_config = config.get("model_config", {})
@@ -206,16 +233,18 @@ if __name__ == "__main__":
 
     logger.info(f"-------------------config information end--------------------------")
 
-    prompt = load_json_vlm_prompt(load_prompt_path)
 
-    image_list = [f for f in os.listdir(load_path) if os.path.isfile(os.path.join(load_path, f))]
+    if mode == 1:
+        test_list = [f for f in os.listdir(load_path) if os.path.isfile(os.path.join(load_path, f))]
+    else:
+        test_list = [f for f in os.listdir(load_path) if os.path.isdir(os.path.join(load_path, f))]
 
     eval_dict = {}
-    gpu_monitor = True
+    # gpu_monitor = True
     if gpu_monitor is True:
-        asyncio.run(combined_run(load_path, image_list, models, prompt, save_path, save_response, eval_dict, model_config))
+        asyncio.run(combined_run(mode, load_path, test_list, models, save_path, save_response, eval_dict, model_config, prompt))
     else:
-        asyncio.run(main(load_path, image_list, models, prompt, save_path, save_response, eval_dict, model_config))
+        asyncio.run(main(mode, load_path, test_list, models, save_path, save_response, eval_dict, model_config, prompt))
 
     # print("Eval_dict:", eval_dict)
     file_summary_table(eval_dict, save_path)
