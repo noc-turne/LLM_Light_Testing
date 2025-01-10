@@ -1,8 +1,8 @@
 {
-    "background_name": "",
-    "background_conversation_file": "",
-    "topic_chosen_file": "",
-    "save_path": "",
+    "background_name": "询问",
+    "background_conversation_file": "example_files/background_conversation.txt",
+    "topic_chosen_file": "example_files/topic_chosen.txt",
+    "save_path": "res",
     "user_prompt_generator_type": "AI", 
     "preset_user_prompt_file": ""
 
