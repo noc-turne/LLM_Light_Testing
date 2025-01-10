@@ -154,41 +154,6 @@ async def combined_run(mode, load_path, test_list, models, save_path, save_respo
     await gpu_task
 
 
-# EVALUATION RELATED
-def response_table(eval_dict, save_path):
-    result = {}
-
-    for image_name, value_list in eval_dict.items():
-        for item in value_list:
-            model = item['model']
-            response = item['response']
-
-            if model not in result:
-                result[model] = []
-
-            result[model].append({image_name: response})
-
-    os.makedirs(save_path, exist_ok=True)
-    for model, responses in result.items():
-        model_path = os.path.join(save_path, model)
-        os.makedirs(model_path, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        csv_file = os.path.join(model_path, f'response_table_{model}_{timestamp}.csv')
-
-        data = []
-        for response in responses:
-            for key, value in response.items():
-                data.append({'image_name': key, 'response': value})
-        df = pd.DataFrame(data)
-        df.to_csv(csv_file, index=False, encoding='utf-8')
-
-    return result
-
-
-def evaluate(eval_dict):
-    return NotImplementedError
-
-
 if __name__ == "__main__":
     config_file = "config_vlm.json"
     config = load_json_file(config_file)
