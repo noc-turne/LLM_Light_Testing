@@ -10,74 +10,18 @@ import aiohttp
 import sys
 import copy
 
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from utils.file_helper import *
+from gpu_monitor import *
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
 )
 current_file = os.path.splitext(os.path.basename(__file__))[0]
 logger = logging.getLogger(current_file)
-
-
-# GPU RELATED
-def gpu_info2txt(file_name, response):
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    with open(file_name, "a") as file:
-        file.write(f"Current Time: {timestamp}\n")
-        for gpu in response:
-            file.write(f"GPU {gpu['gpu_id']} ({gpu['name']}):\n")
-            file.write(f"  GPU Utilization: {gpu['gpu_utilization']}%\n")
-            file.write(f"  Memory Utilization: {gpu['memory_utilization']}%\n")
-            file.write(f"  Memory: {gpu['memory_used']} MiB / {gpu['memory_total']} MiB\n")
-            file.write("\n")
-        file.write("\n")
-
-
-async def fetch_gpu_info(api_url):
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.get(api_url) as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    logger.error(f"Received status code {response.status} for URL {api_url}")
-                    return None
-        except Exception as e:
-            logger.error(f"Failed to fetch GPU info from {api_url}. Exception: {e}")
-            return None
-
-
-async def monitor_gpu(api_url, interval, file_name, stop_event):
-    while not stop_event.is_set():
-        response = await fetch_gpu_info(api_url)
-        if response:  # Ensure the response is valid
-            gpu_info2txt(file_name, response)
-        await asyncio.sleep(interval)
-
-
-async def gpu_main(models, save_path, stop_event):
-    tasks = []
-    gpu_info_path = os.path.join(save_path, "gpu_info")
-    os.makedirs(gpu_info_path, exist_ok=True)
-    for idx, model in enumerate(models):
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S") + f"_{idx}"
-        if "gpu_url" not in model.keys():
-            continue
-        normalized_path = model['name'].rstrip("/")
-        file_name = os.path.join(gpu_info_path, os.path.basename(normalized_path) + f"_{timestamp}.txt")
-        if "gpu_interval" not in model.keys():
-            interval = 3
-        else:
-            interval = model['gpu_interval']
-        tasks.append(
-            monitor_gpu(
-                model['gpu_url'] + "/gpu_info",
-                interval=interval,
-                file_name=file_name,
-                stop_event=stop_event
-            )
-        )
-
-    await asyncio.gather(*tasks)
-
 
 # RUNNING RELATED
 async def process_model(client, model_idx, model, prompt, test_name, image_path_list, save_folder, save_response, model_config):
@@ -130,7 +74,7 @@ async def process_model(client, model_idx, model, prompt, test_name, image_path_
         model_file_path = os.path.join(save_folder, model_file_name)
         with open(model_file_path, 'w', encoding='utf-8') as f:
             json.dump(record, f, indent=4, ensure_ascii=False)
-    # logger.info(f"Prompt {file_name} for model {model['name']} successfully processed")
+
     return record['response'], record['prompt_token_len'], record['decode_token_len'], record['elapsed_time'], record[
         'start_time'], record['end_time']
 
@@ -334,12 +278,15 @@ if __name__ == "__main__":
     model_config = config.get("model_config", {})
     models = config.get("models", [])
 
+    os.makedirs(save_path, exist_ok=True)
+
     logger.info(f"-------------------config information--------------------------")
 
     logger.info(f"model_count: {len(models)}")
     logger.info(f"load_path: {load_path}")
     logger.info(f"save_path: {save_path}")
     logger.info(f"save_response: {save_response}")
+
     gpu_monitor = False
     for model in models:
         if 'gpu_url' in model.keys():
@@ -352,32 +299,12 @@ if __name__ == "__main__":
 
     logger.info(f"-------------------config information end--------------------------")
 
+    prompt = load_json_vlm_prompt(load_prompt_path)
 
-    with open(load_prompt_path, 'r', encoding='utf-8') as file:
-        content = file.read()
-    try:
-        prompt = json.loads(content)
-        assert isinstance(prompt, list), "Error: 'prompt' must be a list."
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON in file: {load_prompt_path}")
-        logger.error(f"Error: {e}")
-        logger.warning(f"Automatically transform txt into json")
-        prompt = [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": content
-                    }
-                ]
-            }
-        ]
-        logger.warning(f"The json prompt is shown below:\n{prompt}")
     image_list = [f for f in os.listdir(load_path) if os.path.isfile(os.path.join(load_path, f))]
 
     eval_dict = {}
-    gpu_monitor = False
+    gpu_monitor = True
     if gpu_monitor is True:
         asyncio.run(combined_run(load_path, image_list, models, prompt, save_path, save_response, eval_dict, model_config))
     else:
