@@ -5,8 +5,6 @@
 ## 目录
 
 - [功能介绍](#功能介绍)
-- [环境要求](#环境要求)
-- [安装依赖](#安装依赖)
 - [配置文件说明](#配置文件说明)
 - [使用方法](#使用方法)
 - [结果保存](#结果保存)
@@ -21,11 +19,6 @@
 - **结果记录与保存**：记录每次请求的详细信息，包括响应时间、令牌使用情况等，并支持将响应内容保存为 JSON 和 CSV 格式。
 - **灵活配置**：通过配置文件自定义测试模式、路径、模型信息等。
 
-## 环境要求
-
-- Python 3.8 及以上
-- 支持的操作系统：Linux、macOS、Windows
-
 ## 配置文件说明
 
 项目使用 JSON 格式的配置文件 `config_vlm.json` 来定义测试参数。以下是配置文件的示例及说明：
@@ -34,7 +27,7 @@
 {
     "load_config": {
         "mode": 0,
-        "load_path": "/mnt/afs/marunmin/testing_pipeline/vlm/vlm_examples"
+        "load_path": "vlm_examples/mode0"
     },
     "save_path": "vlm_res",
     "save_response": true,
@@ -50,28 +43,44 @@
 }
 ```
 
+```json
+{
+    "load_config": {
+        "mode": 1,
+        "load_images_path": "vlm_examples/mode1/images",
+        "load_prompt_path": "vlm_examples/mode1/prompt.txt"
+    },
+    ...
+}
+```
+
 ### 配置项说明
 
 - `load_config`：定义加载数据的配置。
   - `mode`：
-    - `0`：一般性的情况，针对不同prompt对应不同images的一般性场景
-    加载路径下测试文件结构如下所示：
-   ```
-   load_path/
-   ├── test1/
-   │   ├── prompt1.txt
-   │   ├── images/
-   │   │   ├── a.jpg
-   │   │   └── b.jpg
-   ├── test2/
-   │   ├── prompt2.txt
-   │   ├── images/
-   │   │   ├── c.jpg
-   │   │   └── d.jpg
-   ```
+    - `0`：一般性的情况，针对不同prompt对应不同images的一般性场景, 加载路径下测试文件结构如下所示：
+    ```
+    load_path/
+    ├── test1/
+    │   ├── prompt1.txt
+    │   ├── images/
+    │   │   ├── a.jpg
+    │   │   └── b.jpg
+    ├── test2/
+    │   ├── prompt2.txt
+    │   ├── images/
+    │   │   ├── c.jpg
+    │   │   └── d.jpg
+    ```
     - `1`：prompt保持不变，每次输入的图片变化，且每次输入一个图片。
-  - `load_images_path`：图片文件夹加载路径。
-  - `load_prompt_path`：prompt文件加载路径
+      - `load_images_path`：图片文件夹加载路径。
+      - `load_prompt_path`：prompt文件加载路径。
+      加载路径下测试文件结构如下所示：
+    ```
+    load_images_path/
+    ├── a.jpg
+    ├── b.jpg
+
 - `save_path`：结果保存路径。
 
 - `save_response`：是否保存模型响应内容。`true` 表示保存，`false` 表示不保存。
@@ -89,9 +98,6 @@
 1. **准备数据**：
 
    根据配置文件中的 `mode` 设置，准备相应的提示文件和图片文件夹。
-
-   - **模式 0**：`load_path` 下包含一个提示文件（`.txt` 或 `.json`）和一个图片文件夹。
-   - **模式 1**：`load_path` 下包含多个提示文件和对应的图片文件夹。
 
 2. **配置文件**：
 
@@ -113,7 +119,7 @@
 - **汇总表格**：
   - `file_summary_table.csv`：汇总每个测试文件的结果。
   - `model_summary_table.csv`：汇总每个模型的整体表现。
-  - `response_table_<model>_<timestamp>.csv`：按模型分类的响应内容。
+  - `response_table_<model>.csv`：按模型分类的响应内容, 保存在 `save_path`对应模型的文件夹下
 
 
 ## 常见问题与调试
