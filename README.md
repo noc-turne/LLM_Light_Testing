@@ -273,46 +273,6 @@ GPU 1 (NVIDIA A100):
 
 具体信息可见[vlm测试](vlm/README.md)
 
-本功能用于对视觉大语言模型（如Qwen2-VL-7B）进行测试，当前为测试版本，支持基于`vLLM`框架的本地部署。
-
-#### 测试流程
-
-1. **模型部署**  
-   确保模型已部署在本地，通过`vLLM`进行部署。以下是示例命令：
-   ```bash
-   vllm serve Qwen2-VL-7B --task generate --max-model-len 4096 --allowed-local-media-path path-to-testing_pipeline --limit-mm-per-prompt image=k
-   ```
-
-2. **配置`config_vlm.json`**  
-   创建并配置`config_vlm.json`文件，其内容暂时与`config.json`一致。
-
-3. **准备测试文件**  
-   测试文件结构示例：
-   ```
-   load_path/
-   ├── test1/
-   │   ├── prompt1.txt
-   │   ├── images/
-   │   │   ├── a.jpg
-   │   │   └── b.jpg
-   ├── test2/
-   │   ├── prompt2.txt
-   │   ├── images/
-   │   │   ├── c.jpg
-   │   │   └── d.jpg
-   ```
-
-4. **运行测试脚本**  
-   运行以下命令启动测试：
-   ```bash
-   python start_testing_vlm.py
-   ```
-
-#### 注意事项
-- 测试文件目录中，`prompt1.txt`存储测试的文本提示，`images`目录下存储相关联的图像文件。
-- 确保`allowed-local-media-path`指向testing_pipeline的本机目录。
-- 当前仅支持单机本地部署测试。
-
 
 ## 常见问题
 
