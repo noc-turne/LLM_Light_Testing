@@ -40,7 +40,6 @@ async def process_model(client, model_idx, model, prompt, test_name, image_path_
 
     config = {"model": model['name'], "messages": current_prompt}
     if model_config is not None:
-        # TODO model_config的验证
         config.update(model_config)
     api_key = model['api_key'] if 'api_key' in model else 'token-123'
     try:
@@ -214,4 +213,4 @@ if __name__ == "__main__":
     # print("Eval_dict:", eval_dict)
     file_summary_table(eval_dict, save_path)
     model_summary_table(eval_dict, save_path)
-    response_table(eval_dict, save_path)
+    response_summary_table(eval_dict, save_path)

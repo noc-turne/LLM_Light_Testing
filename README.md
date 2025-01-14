@@ -8,6 +8,7 @@
   - [配置文件结构](#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84)
   - [Prompt文件格式](#prompt%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F)
   - [运行测试流程](#%E8%BF%90%E8%A1%8C%E6%B5%8B%E8%AF%95%E6%B5%81%E7%A8%8B)
+  - [测试结果存储](#%E6%B5%8B%E8%AF%95%E7%BB%93%E6%9E%9C%E5%AD%98%E5%82%A8)
   - [表格总结功能](#%E8%A1%A8%E6%A0%BC%E6%80%BB%E7%BB%93%E5%8A%9F%E8%83%BD)
   - [GPU监控支持](#gpu%E7%9B%91%E6%8E%A7%E6%94%AF%E6%8C%81)
   - [视觉大语言模型测试（BETA版）](#%E8%A7%86%E8%A7%89%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E6%B5%8B%E8%AF%95beta%E7%89%88)
@@ -91,7 +92,7 @@
     "file_summary": true,
     "response_summary": true
     },
-    "model_config": {"max_completion_tokens": "100"},
+    "model_config": {"max_completion_tokens": 100},
     "models": [
       {
         "name": "llama-3.3-70B-instruct",
@@ -269,6 +270,8 @@ GPU 1 (NVIDIA A100):
 ---
 
 ### 视觉大语言模型测试（BETA版）
+
+具体信息可见(https://github.com/noc-turne/testing_pipeline/tree/main/vlm)
 
 本功能用于对视觉大语言模型（如Qwen2-VL-7B）进行测试，当前为测试版本，支持基于`vLLM`框架的本地部署。
 

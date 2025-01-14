@@ -97,7 +97,7 @@ def file_summary_table(eval_dict, save_path):
     df_display.to_excel(output_file_path, index=False)
 
 
-def response_table(eval_dict, save_path):
+def response_summary_table(eval_dict, save_path):
     data = []
     for prompt, entries in eval_dict.items():
         for entry in entries:
