@@ -25,7 +25,6 @@ logger = logging.getLogger(current_file)
 
 # RUNNING RELATED
 async def process_model(client, model_idx, model, prompt, test_name, image_path_list, save_folder, save_response, model_config):
-    # print("idx", model_idx, "model", model, "prompt", prompt, "test_name", test_name, "path_list", image_path_list, "save_folder", save_folder, "response", save_response, "config", model_config)
     start_time = time.time()
     current_prompt = copy.deepcopy(prompt)
     for image_path in image_path_list:
@@ -173,9 +172,14 @@ if __name__ == "__main__":
         
     save_path = config.get("save_path", "")
     save_response = config.get("save_response", True)
+    summary_info = config.get("summary", {})
     model_config = config.get("model_config", {})
-    models = config.get("models", [])
+    flag, info = validate_model_config_params(model_config)
+    if flag is False:
+        logger.error(info)
+        raise ConfigError
 
+    models = config.get("models", [])
     os.makedirs(save_path, exist_ok=True)
 
     logger.info(f"-------------------config information--------------------------")
@@ -184,19 +188,20 @@ if __name__ == "__main__":
     logger.info(f"load_path: {load_path}")
     logger.info(f"save_path: {save_path}")
     logger.info(f"save_response: {save_response}")
+    logger.info(f"summary_info: {summary_info}" )
+    logger.info(f"model_config: {model_config}")
 
     gpu_monitor = False
     for model in models:
         if 'gpu_url' in model.keys():
             gpu_monitor = True
             logger.info(
-                f"model_name: {model['name']}, model_url: {model['url']}, gpu_url: {model['gpu_url']}, gpu_interval: {model['gpu_interval']}"
+                f"model_name: {model['name']}, model_url: {model['url']}, gpu_url: {model['gpu_url']}, gpu_interval: {model.get('gpu_interval', 3)}"
             )
         else:
             logger.info(f"model_name: {model['name']}, model_url: {model['url']}")
 
     logger.info(f"-------------------config information end--------------------------")
-
 
     if mode == 1:
         test_list = [f for f in os.listdir(load_path) if os.path.isfile(os.path.join(load_path, f))]
@@ -204,13 +209,14 @@ if __name__ == "__main__":
         test_list = [f for f in os.listdir(load_path) if os.path.isdir(os.path.join(load_path, f))]
 
     eval_dict = {}
-    # gpu_monitor = True
     if gpu_monitor is True:
         asyncio.run(combined_run(mode, load_path, test_list, models, save_path, save_response, eval_dict, model_config, prompt))
     else:
         asyncio.run(main(mode, load_path, test_list, models, save_path, save_response, eval_dict, model_config, prompt))
 
-    # print("Eval_dict:", eval_dict)
-    file_summary_table(eval_dict, save_path)
-    model_summary_table(eval_dict, save_path)
-    response_summary_table(eval_dict, save_path)
+    if summary_info.get("model_summary", False) is True:
+        model_summary_table(eval_dict, save_path)
+    if summary_info.get("file_summary", False) is True:
+        file_summary_table(eval_dict, save_path)
+    if summary_info.get("response_summary", False) is True:
+        response_summary_table(eval_dict, save_path)
