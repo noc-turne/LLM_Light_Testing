@@ -1,22 +1,11 @@
 # VLM 测试(BETA版)
-
-本项目是一个用于处理视觉语言模型（VLM）测试的管道。它支持多模型并行处理，通过异步请求与模型进行交互，记录响应时间和令牌使用情况，并监控 GPU 资源使用。最终，测试结果将以多种格式保存，便于后续分析和评估。
+本功能用于对视觉大语言模型（如Qwen2-VL-7B）进行测试，当前为Beta版本，支持基于`vLLM`框架的本地部署。
 
 ## 目录
 
-- [功能介绍](#功能介绍)
 - [配置文件说明](#配置文件说明)
 - [使用方法](#使用方法)
 - [结果保存](#结果保存)
-- [常见问题与调试](#常见问题与调试)
-
-## 功能介绍
-
-- **多模型并行处理**：支持同时向多个模型发送请求，提高测试效率。
-- **异步请求**：利用 `asyncio` 和 `httpx` 实现异步 HTTP 请求，优化响应时间。
-- **GPU 监控**：实时监控 GPU 使用情况，确保资源的合理利用。
-- **结果记录与保存**：记录每次请求的详细信息，包括响应时间、令牌使用情况等，并支持将响应内容保存为 JSON 和 CSV 格式。
-- **灵活配置**：通过配置文件自定义测试模式、路径、模型信息等。
 
 ## 配置文件说明
 
@@ -30,15 +19,20 @@
     },
     "save_path": "vlm_res",
     "save_response": true,
+    "summary": {
+    "model_summary": true,
+    "file_summary": true,
+    "response_summary": true
+    },
+    "model_config": {"max_completion_tokens": 100},
     "models": [
         {
             "name": "Qwen2-VL-7B",
-            "url": "http://14.103.16.79:11004",
-            "gpu_url": "http://14.103.16.79:11005",
+            "url": "http://xxx.xxx.xxx.xxx:xxxx",
+            "gpu_url": "http://xxx.xxx.xxx.xxx:xxxx",
             "gpu_interval": 3
         }
     ],
-    "model_config": {}
 }
 ```
 
@@ -80,17 +74,7 @@
     ├── a.jpg
     ├── b.jpg
 
-- `save_path`：结果保存路径。
-
-- `save_response`：是否保存模型响应内容。`true` 表示保存，`false` 表示不保存。
-
-- `models`：定义要测试的模型列表。
-  - `name`：模型名称。
-  - `url`：模型 API 端点 URL。
-  - `gpu_url`（可选）：GPU 监控的 API URL。
-  - `gpu_interval`（可选）：GPU 监控的时间间隔（秒）。
-
-- `model_config`（可选）：模型的其他配置参数，可根据需要添加。
+- 其他配置参数与语言模型保持一致, 详见[配置文件结构](../README.md#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84)
 
 ## 使用方法
 
@@ -102,7 +86,13 @@
 
    编辑 `config_vlm.json`，根据实际情况填写各项配置。
 
-3. **运行脚本**：
+3. **模型部署**  
+   确保模型已部署在本地，通过`vLLM`进行部署。以下是示例命令：
+   ```bash
+   vllm serve Qwen2-VL-7B --task generate --max-model-len 4096 --allowed-local-media-path path-to-testing_pipeline --limit-mm-per-prompt image=k
+   ```
+
+4. **运行脚本**：
 
    在终端中运行以下命令：
 
@@ -118,22 +108,7 @@
 - **汇总表格**：
   - `file_summary_table.csv`：汇总每个测试文件的结果。
   - `model_summary_table.csv`：汇总每个模型的整体表现。
-  - `response_table_<model>.csv`：按模型分类的响应内容, 保存在 `save_path`对应模型的文件夹下
+  - `response_summary_table.csv`：汇总每个测试文件下每个模型的回答内容
 
+具体生成样式可参考[测试结果存储](../README.md#%E6%B5%8B%E8%AF%95%E7%BB%93%E6%9E%9C%E5%AD%98%E5%82%A8)和[表格总结功能](../README.md#%E8%A1%A8%E6%A0%BC%E6%80%BB%E7%BB%93%E5%8A%9F%E8%83%BD)
 
-## 常见问题与调试
-
-### 1. 模式配置错误
-
-**问题**：配置文件中 `mode` 设置不正确，导致数据加载失败。
-
-**解决方法**：确保 `mode` 设置为 `0` 或 `1`，并根据模式正确配置 `load_path`、`load_images_path` 和 `load_prompt_path`。
-
-### 2. 结果文件未生成
-
-**问题**：结果未保存到指定路径。
-
-**解决方法**：
-
-- 确认 `save_path` 配置正确，并且脚本具有写入权限。
-- 检查 `save_response` 是否设置为 `true`，以及保存过程是否有异常。

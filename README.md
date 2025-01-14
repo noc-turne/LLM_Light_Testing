@@ -271,7 +271,7 @@ GPU 1 (NVIDIA A100):
 
 ### 视觉大语言模型测试（BETA版）
 
-具体信息可见(https://github.com/noc-turne/testing_pipeline/tree/main/vlm)
+具体信息可见[vlm测试](vlm/README.md)
 
 本功能用于对视觉大语言模型（如Qwen2-VL-7B）进行测试，当前为测试版本，支持基于`vLLM`框架的本地部署。
 

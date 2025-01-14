@@ -53,7 +53,6 @@ async def process_model(client, model_idx, model, prompt, file_name, save_folder
     config = {"model": model['name'], "messages": prompt}
     if model_config is not None:
         config.update(model_config)
-        print(config)
     try:
         response = await client.post(
             f"{model['url']}/v1/chat/completions",
@@ -106,7 +105,7 @@ async def process_file(load_path, file_name, models, save_path, save_response, e
     prompt = load_json_txt_prompt(file_path)
 
     save_folder = ""
-    # save path
+
     if save_response is True:
         prompt_name = os.path.splitext(file_name)[0]
         save_folder = os.path.join(save_path, prompt_name)
@@ -206,5 +205,5 @@ if __name__ == "__main__":
     if summary_info.get("file_summary", False) is True:
         file_summary_table(eval_dict, save_path)
     if summary_info.get("response_summary", False) is True:
-        response_table(eval_dict, save_path)
+        response_summary_table(eval_dict, save_path)
 
