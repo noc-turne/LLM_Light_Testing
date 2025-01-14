@@ -16,12 +16,12 @@
 ---
 
 ## 目的
-本项目旨在提供一个自动化测试框架，用于对多个模型进行验证与对比，特别是基于[vLLM](https://docs.vllm.ai)框架部署的模型。通过本工具，用户可以快速评估不同模型在相同输入下的性能，并将结果归档，便于后续分析与调试。
+本项目旨在提供一个大语言模型自动化测试框架，特别是基于[vLLM](https://docs.vllm.ai)框架部署的模型。用户可通过配置文件, 一键式实现对多prompt文件及多模型的测试。框架会将生成结果自动归档，并对测试结果生成多个总结表格。同时，框架也支持视觉大语言模型的自动化测试以及服务器模型处理时的gpu指标监测。
 
 ---
 
 ## 功能
-1. **多模型测试**：支持同时测试多个模型，便于性能对比。
+1. **多prompt文件多模型测试**：支持同时测试多个prompt文件和多个模型，便于性能对比。
 2. **灵活配置**：通过`config.json`文件灵活配置模型路径、URL、API密钥等参数。
 3. **统一输出格式**：测试结果按模型和输入分类存储，支持后续自动化分析。
 4. **表格总结功能**：自动生成表格汇总测试结果，便于性能对比和分析。
@@ -69,13 +69,15 @@
 
 - **`load_path`**: Prompt文件的输入路径。
 - **`save_path`**: 测试结果的输出路径。
-- **`save_response`**: bool值，是否需要输出每个prompt的模型运行结果的json文件
+- **`save_response`**: bool值(可选, 默认为true)，是否需要输出每个prompt的模型运行结果的json文件
+- **`summary`**: 字典类型(可选, 默认均为true), 其中包含三个键model_summary，file_summary和response_summary, 其值为bool, 用于是否输出的对应的summary文件，对应的summary文件示例可查看[表格总结功能](#%E8%A1%A8%E6%A0%BC%E6%80%BB%E7%BB%93%E5%8A%9F%E8%83%BD)
+- **`model_config`**: 字典类型(可选, 默认为空), 发送请求时的具体配置, 包括max_completion_tokens, temperature, top-p等, 应用于所有模型, 具体配置内容可参考(https://platform.openai.com/docs/api-reference/chat/object)
 - **`models`**: 模型列表，每个模型包含：
   - **`name`**: 模型路径，与`vLLM`服务路径一致, 不可以重名。
   - **`url`**: 模型的IP地址与端口，并在开头加上"http://"。
   - **`api_key`**: （可选）远端API的密钥。
   - **`gpu_url`**: （可选）GPU监控的API地址，用于获取GPU使用信息。
-  - **`gpu_interval`**: （可选）GPU信息采样间隔时间，单位为秒, 默认为3。
+  - **`gpu_interval`**: int类型（可选, 默认为3）, GPU信息采样间隔时间，单位为秒。
 
 示例：
 
@@ -84,6 +86,12 @@
     "load_path": "examples/prompts", 
     "save_path": "examples/res",
     "save_response": true,
+    "summary": {
+    "model_summary": true,
+    "file_summary": true,
+    "response_summary": true
+    },
+    "model_config": {"max_completion_tokens": "100"},
     "models": [
       {
         "name": "llama-3.3-70B-instruct",
@@ -121,69 +129,75 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
    vllm serve 本地模型路径
    ```
 
-2. 启动GPU监控脚本（如果需要），具体可见[GPU监控支持](#gpu%E7%9B%91%E6%8E%A7%E6%94%AF%E6%8C%81)：
+2. 服务端启动GPU监控脚本（如果需要），具体可见[GPU监控支持](#gpu%E7%9B%91%E6%8E%A7%E6%94%AF%E6%8C%81)：
    ```bash
    python gpu_monitor.py
    ```
 
 3. 将需要测试的prompts整理成一个文件夹如`examples/prompts`。
-4. 配置`config.json`文件。
-5. 运行测试脚本。
+4. 客户端配置`config.json`文件。
+5. 客户端运行测试脚本。
    ```bash
    python start_testing.py
    ```
-6. 测试结果按以下结构存储：
-   ```
-   save_path/
-   ├── prompt1/
-   │   ├── res_of_model1.json
-   │   └── res_of_model2.json
-   ├── prompt2/
-   │   ├── res_of_model1.json
-   │   └── res_of_model2.json
-   ├── gpu_info/
-   │   ├── res_of_model1.txt
-   │   └── res_of_model2.txt
-   ├── file_summary_table.xlsx
-   ├── model_summary_table.xlsx
-   ```
 
-    每个prompt的具体输出如下所示, 可通过配置文件中的save_response选择是否输出：
-    ```json
-    {
-        "file": "prompt1.txt",
-        "model": "llama-3.3-70B-instruct",
-        "model_url": "http://14.103.16.79:11000",
-        "start_time": "2024-12-27T16:09:53.610822",
-        "prompt": [
-            {
-                "role": "user",
-                "content": "If I say HHH, you answer KKK back to me!"
-            },
-            {
-                "role": "assistant",
-                "content": "understood"
-            },
-            {
-                "role": "user",
-                "content": "HHH"
-            }
-        ],
-        "end_time": "2024-12-27T16:09:54.072932",
-        "elapsed_time": 0.46211,
-        "prompt_token_len": 63,
-        "decode_token_len": 3,
-        "response": {
+### 测试结果存储
+测试结果按以下结构存储：
+```
+save_path/
+├── prompt1/
+│   ├── res_of_model1.json
+│   └── res_of_model2.json
+├── prompt2/
+│   ├── res_of_model1.json
+│   └── res_of_model2.json
+├── gpu_info/
+│   ├── res_of_model1.txt
+│   └── res_of_model2.txt
+├── file_summary_table.xlsx
+├── model_summary_table.xlsx
+├── response_summary_table.xlsx
+
+```
+
+每个prompt的具体输出如下所示, 可通过配置文件中的save_response选择是否输出：
+```json
+{
+   "file": "prompt1.txt",
+   "model": "llama-3.3-70B-instruct",
+   "model_url": "http://xxx.xxx.xxx.xxx:xxxx",
+   "start_time": "2024-12-27T16:09:53.610822",
+   "prompt": [
+      {
+            "role": "user",
+            "content": "If I say HHH, you answer KKK back to me!"
+      },
+      {
             "role": "assistant",
-            "content": "KKK",
-            "tool_calls": []
-        }
-    }
-    ```
+            "content": "understood"
+      },
+      {
+            "role": "user",
+            "content": "HHH"
+      }
+   ],
+   "end_time": "2024-12-27T16:09:54.072932",
+   "elapsed_time": 0.46211,
+   "prompt_token_len": 63,
+   "decode_token_len": 3,
+   "response": {
+      "role": "assistant",
+      "content": "KKK",
+      "tool_calls": []
+   }
+}
+   ```
 
 ### 表格总结功能
 
-程序会生成一个文件总结表格和模型总结表格，用于对测试结果进行汇总分析。文件总结表格（file_summary_table.xlsx）结构示例如下：
+程序会生成多个表格，用于对测试结果进行汇总分析。
+
+文件总结表格（file_summary_table.xlsx）结构示例如下：
 
 | Prompt        | Model                                    | Prompt Token Length | Decode Token Length | Elapsed Time(s) | Decode Speed(Token/s) |
 |---------------|------------------------------------------|---------------------|----------------------|-----------------|------------------------|
@@ -198,15 +212,13 @@ Prompt文件为一个JSON列表，每个元素包含以下字段：
 | llama-3.3-70B-instruct                   | -1                  | -1                   | -1              | -1                     |
 | deepseek-chat                            | 115255              | 18673                | 29.38           | 635.56                 |
 
-回答表格（response_table_<model>.xlsx) 结构示例如下：
-| Prompt        | Model                                    |
-|---------------|------------------------------------------|
-| prompt1.txt   | llama-3.3-70B-instruct                   | 
-|               | deepseek-chat                            | 
-| prompt2.txt   | llama-3.3-70B-instruct                   |
-|               | deepseek-chat                            | 
-
-
+回答表格（response_summary_table.xlsx） 结构示例如下：
+| Prompt        | Model                                    |Response
+|---------------|------------------------------------------|----------------
+| prompt1.txt   | llama-3.3-70B-instruct                   | KKK
+|               | deepseek-chat                            | KKK
+| prompt2.txt   | llama-3.3-70B-instruct                   | ### The Future of Artificial Intelligence in Education ...
+|               | deepseek-chat                            | # The Future of Artificial Intelligence in Education ...
 
 总结表格存储在`save_path`目录下，文件格式为`.xlsx`，方便使用Excel或其他工具查看。
 

@@ -98,29 +98,24 @@ def file_summary_table(eval_dict, save_path):
 
 
 def response_table(eval_dict, save_path):
-    result = {}
+    data = []
+    for prompt, entries in eval_dict.items():
+        for entry in entries:
+            data.append(
+                {
+                    'Prompt': prompt,
+                    'Model': entry['model'],
+                    'Response': entry['response']['content']
+                }
+            )
 
-    for test_name, value_list in eval_dict.items():
-        for item in value_list:
-            model = item['model']
-            response = item['response']
+    df = pd.DataFrame(data)
 
-            if model not in result:
-                result[model] = []
+    df_display = df.copy()
+    df_display.loc[df_display.duplicated(subset=['Prompt']), 'Prompt'] = ''
 
-            result[model].append({test_name: response})
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_name = f"response_summary_table_{timestamp}.xlsx"
 
-    for model, responses in result.items():
-        model_path = os.path.join(save_path, model)
-        os.makedirs(model_path, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        xlsx_file = os.path.join(model_path, f'response_table_{model}_{timestamp}.xlsx')
-
-        data = []
-        for response in responses:
-            for key, value in response.items():
-                data.append({'test_name': key, 'response': value})
-        df = pd.DataFrame(data)
-        df.to_excel(xlsx_file, index=False)
-
-    return result
+    output_file_path = os.path.join(save_path, file_name)
+    df_display.to_excel(output_file_path, index=False)
