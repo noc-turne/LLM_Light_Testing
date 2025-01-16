@@ -6,6 +6,11 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 import sys
+import requests
+from copy import deepcopy
+
+
+TEST = False
 
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
@@ -25,6 +30,15 @@ class UserPromptGenerator(Enum):
     preset = 1
     AI = 2
     user = 3
+
+def cleans2s_generate(messages):
+    url = "http://127.0.0.1:8000/process"
+
+    payload = {
+        "user_input": messages
+    }
+
+    response = requests.post(url, json=payload)
 
 def generate_sys_prompt(identity, topic):
     if(identity == 'user'):
@@ -83,6 +97,18 @@ def extend_tree(background_name, messages, topic_hist_list, extend_num, save_pat
         json.dump(msg, f, indent=4, ensure_ascii=False)
     logger.info(f"done {file_name}")
 
+def test_message_in_system_prompt(messages, role_name="AI"):
+    extracted_content = []
+    for message in messages[:-1]:
+        role = message.get("role", "unknown")
+        if role == "assistant":
+            role = role_name
+        content = message.get("content", "")
+        extracted_content.append(f"{role}: {content}")
+    
+    return "\n".join(extracted_content)
+
+
 def process_topic(background_name, messages, topic, topic_chosen_list, save_path, expand_num, extend_num, user_prompt_generator, preset_user_prompt_dict):
     local_messages = messages[:]
     topic_hist_list = [topic]
@@ -92,7 +118,12 @@ def process_topic(background_name, messages, topic, topic_chosen_list, save_path
         assert preset_user_prompt_dict is not None, "Error: preset_user_prompt_dict is None"
         user_prompt_text = preset_user_prompt_dict[topic]
     elif user_prompt_generator == UserPromptGenerator.AI:
-        user_prompt_text = call_ai(local_messages, generate_sys_prompt('user', topic))
+        if TEST == True:
+            system_prompt = generate_sys_prompt('user', topic)
+            system_prompt['content'] += test_message_in_system_prompt(messages)
+            user_prompt_text = call_ai([messages[-1]], system_prompt)
+        else:
+            user_prompt_text = call_ai(messages, generate_sys_prompt('user', topic))
     else:
         user_prompt_text = input(f"请输入针对话题'{topic}'的内容：")
 
@@ -100,7 +131,12 @@ def process_topic(background_name, messages, topic, topic_chosen_list, save_path
     local_messages.append(user_prompt)
 
     # Get AI response
-    response_text = call_ai(local_messages, generate_sys_prompt("AI", topic), model_url="http://14.103.16.79:11001/v1", model_name="Qwen25_72B_instruct")
+    if TEST == True:
+        system_prompt = generate_sys_prompt('AI', topic)
+        system_prompt['content'] += test_message_in_system_prompt(messages)
+        response_text = call_ai([messages[-1]], system_prompt, model_url="http://14.103.16.79:11001/v1", model_name="Qwen25_72B_instruct")
+    else:
+        response_text = call_ai(messages, generate_sys_prompt("AI", topic), model_url="http://14.103.16.79:11001/v1", model_name="Qwen25_72B_instruct")
     response = {"role": "assistant", "content": response_text}
     local_messages.append(response)
 
@@ -165,14 +201,24 @@ def dfs_generate_tree(background_name, messages, topic_hist_list, depth, topic_c
                 assert preset_user_prompt_dict is not None, "Error: preset_user_prompt_dict is None"
                 user_prompt_text = preset_user_prompt_dict[topic]
             elif user_prompt_generator == UserPromptGenerator.AI:
-                user_prompt_text = call_ai(messages, generate_sys_prompt('user', topic))
+                if TEST == True:
+                    system_prompt = generate_sys_prompt('user', topic)
+                    system_prompt['content'] += test_message_in_system_prompt(messages)
+                    user_prompt_text = call_ai([messages[-1]], system_prompt)
+                else:
+                    user_prompt_text = call_ai(messages, generate_sys_prompt('user', topic))
             else:
                 user_prompt_text = input(f"请输入针对话题'{topic}'的内容：")
 
             user_prompt = {"role": "user", "content": user_prompt_text}
             messages.append(user_prompt)
 
-            response_text = call_ai(messages, generate_sys_prompt("AI", topic), model_url="http://14.103.16.79:11001/v1", model_name="Qwen25_72B_instruct")
+            if TEST == True:
+                system_prompt = generate_sys_prompt('AI', topic)
+                system_prompt['content'] += test_message_in_system_prompt(messages)
+                response_text = call_ai([messages[-1]], system_prompt, model_url="http://14.103.16.79:11001/v1", model_name="Qwen25_72B_instruct")
+            else:
+                response_text = call_ai(messages, generate_sys_prompt("AI", topic), model_url="http://14.103.16.79:11001/v1", model_name="Qwen25_72B_instruct")
             response = {"role": "assistant", "content": response_text}
             messages.append(response)
 
@@ -188,6 +234,8 @@ def dfs_generate_tree(background_name, messages, topic_hist_list, depth, topic_c
                 user_prompt_generator,
                 preset_user_prompt_dict
             )
+
+            
 
             messages.pop()  # 移除 AI 的响应
             messages.pop()  # 移除用户的提示
