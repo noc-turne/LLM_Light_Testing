@@ -177,7 +177,7 @@ if __name__ == "__main__":
     flag, info = validate_model_config_params(model_config)
     if flag is False:
         logger.error(info)
-        raise ConfigError
+        raise ModelConfigError
 
     models = config.get("models", [])
     os.makedirs(save_path, exist_ok=True)

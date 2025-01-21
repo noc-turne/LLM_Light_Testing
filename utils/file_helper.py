@@ -30,7 +30,7 @@ def load_json_file(load_path) -> json:
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse JSON in file: {load_path}")
         logger.error(f"Error: {e}")
-        raise json.JSONDecodeError
+        raise ConfigError
     
     return json_content
 
@@ -165,13 +165,22 @@ def validate_model_config_params(model_config):
     
     return (True, "All parameters are valid.")
 
-class ConfigError(Exception):
+class ModelConfigError(Exception):
     """Custom exception for configuration errors."""
     def __init__(self, *args):
         super().__init__(*args)
     
     def __str__(self):
         return "The model_config in config file is not configured correctly. Refer to the documentation for valid configurations: https://platform.openai.com/docs/api-reference/chat/object"
+    
+
+class ConfigError(Exception):
+    """Custom exception for configuration errors."""
+    def __init__(self, *args):
+        super().__init__(*args)
+    
+    def __str__(self):
+        return "The config file is not configured correctly. Refer to the documentation for valid configurations: https://github.com/noc-turne/LLM_Light_Testing/tree/main?tab=readme-ov-file#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E7%BB%93%E6%9E%84"
 
 
 
